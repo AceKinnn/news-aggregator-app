@@ -1,65 +1,407 @@
-import Image from "next/image";
+"use client"
+
+import { useEffect, useState, useRef  } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import NewsCard from "@/components/NewsCard"
+import { NewsItem } from "@/types/news"
+import ArticleModal from "@/components/ArticleModal"
+import { Menu, MenuButton, MenuItems, MenuItem } from "@headlessui/react"
+import { MagnifyingGlassIcon, ChevronDownIcon, ChevronUpIcon, CheckIcon } from "@heroicons/react/20/solid"
+import { SOURCE_COLORS } from "@/lib/constants"
+
 
 export default function Home() {
+  const isFirstLoad = useRef(true)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+
+  const [news, setNews] = useState<NewsItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const previousIdsRef = useRef<Set<string>>(new Set())
+  const [newMap, setNewMap] = useState<Map<string, number>>(new Map())
+  const NEW_TTL_MS = 2 * 60 * 1000 // 2 minutes
+
+  const [readSet, setReadSet] = useState<Set<string>>(new Set())
+
+  const [previewItem, setPreviewItem] = useState<NewsItem | null>(null)
+
+  const isUnread = (link: string) => !readSet.has(link)
+  const isNew = (link: string) =>
+    newMap.has(link) && Date.now() - newMap.get(link)! < NEW_TTL_MS
+  
+
+  const fetchNews = async () => {
+    try {
+      if (isFirstLoad.current) {
+        setLoading(true)
+      } else {
+        setRefreshing(true)
+      }
+
+      const res = await fetch("/api/news")
+      const data: NewsItem[] = await res.json()
+
+      // --- detect new articles ---
+      const now = Date.now()
+      const prevIds = previousIdsRef.current
+      const currentIds = new Set(data.map(n => n.link))
+
+      const updatedNewMap = new Map(newMap)
+
+      // only mark NEW after first load
+      if (!isFirstLoad.current) {
+        data.forEach(n => {
+          if (!prevIds.has(n.link)) {
+            updatedNewMap.set(n.link, now)
+          }
+        })
+      }
+
+      // remove expired NEW entries
+      for (const [link, detectedAt] of updatedNewMap) {
+        if (now - detectedAt > NEW_TTL_MS) {
+          updatedNewMap.delete(link)
+        }
+      }
+
+      setNewMap(updatedNewMap)
+      previousIdsRef.current = currentIds
+
+      // ---------------------------
+
+      setNews(data)
+      setLastUpdated(new Date())
+      isFirstLoad.current = false
+      
+    } catch (err) {
+      console.error("Failed to fetch news", err)
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
+  const newCount = Array.from(newMap.values()).filter(
+    detectedAt => Date.now() - detectedAt < NEW_TTL_MS
+  ).length
+
+  
+
+
+  const sources = ["All", ...Array.from(new Set(news.map(n => n.source)))]
+
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const [search, setSearch] = useState(
+    searchParams.get("q") ?? ""
+  )
+
+  const [selectedSources, setSelectedSources] = useState<string[]>(
+    searchParams.get("source")?.split(",") ?? []
+  )
+
+
+
+
+  useEffect(() => {
+    fetchNews()
+    const interval = setInterval(fetchNews, 60 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const filtered = news
+    .filter(n => {
+      const matchesTitle = n.title.toLowerCase().includes(search.toLowerCase())
+      const matchesSource =
+        selectedSources.length === 0 || selectedSources.includes(n.source)
+
+      return matchesTitle && matchesSource
+    })
+    .sort((a, b) => {
+      const aNew = isNew(a.link) && isUnread(a.link)
+      const bNew = isNew(b.link) && isUnread(b.link)
+
+      if (aNew !== bNew) return aNew ? -1 : 1
+
+      const aUnread = isUnread(a.link)
+      const bUnread = isUnread(b.link)
+
+      if (aUnread !== bUnread) return aUnread ? -1 : 1
+
+      return (
+        new Date(b.published || 0).getTime() -
+        new Date(a.published || 0).getTime()
+      )
+    })
+
+  const unreadCount = filtered.filter(
+    item => !readSet.has(item.link)
+  ).length
+
+
+  useEffect(() => {
+    const params = new URLSearchParams()
+
+    if (search) params.set("q", search)
+    if (selectedSources.length > 0)
+      params.set("source", selectedSources.join(","))
+
+    router.replace(`?${params.toString()}`, { scroll: false })
+  }, [search, selectedSources, router])
+
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore when typing in inputs / textareas
+      const target = e.target as HTMLElement
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return
+      }
+
+      if (e.key === "r" || e.key === "R") {
+        e.preventDefault()
+        fetchNews()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [])
+
+  useEffect(() => {
+    const saved = localStorage.getItem("readArticles")
+    if (saved) {
+      setReadSet(new Set(JSON.parse(saved)))
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem(
+      "readArticles",
+      JSON.stringify(Array.from(readSet))
+    )
+  }, [readSet])
+
+  const markAllAsRead = () => {
+    setReadSet(prev => {
+      const next = new Set(prev)
+      filtered.forEach(item => next.add(item.link))
+      return next
+    })
+  }
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPreviewItem(null)
+      }
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [])
+
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="mx-auto p-12">
+      <h1 className="text-3xl font-bold mb-4">📰 News RSS Reader</h1>
+
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+        {/* Search */}
+        <div className="relative flex-1">
+          <MagnifyingGlassIcon
+            className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
+            aria-hidden="true"
+          />
+
+          <input
+            type="text"
+            placeholder="Search news title"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-white rounded-xl shadow-sm text-sm
+                      focus:outline-none focus:ring-1 focus:ring-gray-400 h-10"
+          />
+        </div>
+
+
+        {/* Source filter */}
+        <Menu as="div" className="relative inline-block text-left">
+          {({ open }) => (
+            <>
+              <MenuButton className="inline-flex items-center justify-between w-56 rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                <span className="inline-flex items-center gap-2 truncate">
+                  <p className="truncate">
+                    {selectedSources.length === 0
+                      ? "All sources"
+                      : `${selectedSources.length} source(s)`}
+                  </p>
+
+                  <div className="flex -space-x-2 overflow-hidden">
+                    {selectedSources.map((src, i) => (
+                      <span
+                        key={i}
+                        className="w-4 h-4 rounded-full border border-white"
+                        style={{ backgroundColor: SOURCE_COLORS[src] ?? "#9ca3af" }}
+                      />
+                    ))}
+                  </div>
+                </span>
+
+                {open ? (
+                  <ChevronUpIcon className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                )}
+              </MenuButton>
+
+              <MenuItems className="absolute right-0 z-10 mt-2 w-64 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black/5 focus:outline-none">
+                <div className="py-1">
+                  {sources
+                    .filter(s => s !== "All")
+                    .map(source => {
+                      const isSelected = selectedSources.includes(source)
+
+                      return (
+                        <MenuItem key={source}>
+                          {({ focus }) => (
+                            <button
+                              onClick={() => {
+                                setSelectedSources(prev =>
+                                  isSelected
+                                    ? prev.filter(s => s !== source)
+                                    : [...prev, source]
+                                )
+                              }}
+                              className={`flex items-center gap-3 w-full px-4 py-2 text-sm rounded-lg text-left
+                                ${focus ? "bg-gray-100" : ""}
+                              `}
+                            >
+                              <span
+                                className="w-4 h-4 rounded-full"
+                                style={{
+                                  backgroundColor:
+                                    SOURCE_COLORS[source] ?? "#9ca3af",
+                                }}
+                              />
+
+                              <span className="flex-1">{source}</span>
+
+                              {isSelected && (
+                                <CheckIcon className="h-4 w-4 text-blue-600" />
+                              )}
+                            </button>
+                          )}
+                        </MenuItem>
+                      )
+                    })}
+                </div>
+              </MenuItems>
+            </>
+          )}
+        </Menu>
+      </div>
+
+
+      {loading && <p>Fetching news...</p>}
+
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-gray-500 my-1">
+            Found {filtered.length} articles
           </p>
+          
+          {unreadCount > 0 && (
+            <span className="ml-2 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+              {unreadCount} unread
+            </span>
+          )}
+
+          {newCount > 0 && !isFirstLoad.current && (
+            <span
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="cursor-pointer inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 animate-pulse"
+            >
+              {newCount} new article{newCount > 1 ? "s" : ""}
+            </span>
+
+          )}
+
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+
+        <div className="flex items-center gap-3 text-sm text-gray-500 my-1">
+          <button
+            onClick={markAllAsRead}
+            disabled={unreadCount === 0}
+            className="text-sm font-medium text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+            Mark all as read
+          </button>
+
+          {lastUpdated && (
+            <span>
+              Last updated:{" "}
+              {lastUpdated.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              })}
+            </span>
+          )}
+
+          {/* Manual refresh */}
+          <button
+            onClick={fetchNews}
+            title="Refresh news"
+            className={`transition ${
+              refreshing ? "animate-spin text-black" : "hover:text-black"
+            }`}
+          >
+            ↻
+          </button>
+
+        </div>
+      </div>
+
+
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {filtered.length > 0 ? (
+          filtered.map((item) => (
+            <NewsCard
+              key={item.link}
+              item={item}
+              isNew={isNew(item.link)}
+              isRead={!isUnread(item.link)}
+              onRead={() =>
+                setReadSet(prev => new Set(prev).add(item.link))
+              }
+              onPreview={setPreviewItem}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+
+
+          ))
+
+        ) : (
+          <p className="col-span-full text-center text-gray-500">
+            No news found.
+          </p>
+        )}
+      </div>
+
+      {previewItem && (
+        <ArticleModal
+          item={previewItem}
+          onClose={() => setPreviewItem(null)}
+        />
+      )}
+
+
+    </main>
+  )
 }
