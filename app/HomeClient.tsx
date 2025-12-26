@@ -25,6 +25,10 @@ export default function HomeClient() {
 
   const [previewItem, setPreviewItem] = useState<NewsItem | null>(null)
 
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+
+
   const isUnread = (link: string) => !readSet.has(link)
   const isNew = (link: string) =>
     newMap.has(link) && Date.now() - newMap.get(link)! < NEW_TTL_MS
@@ -135,6 +139,14 @@ export default function HomeClient() {
       )
     })
 
+  const totalPages = Math.ceil(filtered.length / pageSize)
+
+  const paginated = filtered.slice(
+    (page - 1) * pageSize,
+    page * pageSize
+  )
+
+
   const unreadCount = filtered.filter(
     item => !readSet.has(item.link)
   ).length
@@ -204,6 +216,10 @@ export default function HomeClient() {
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
   }, [])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, selectedSources])
 
 
   return (
@@ -314,7 +330,7 @@ export default function HomeClient() {
           <p className="text-sm text-gray-500 my-1">
             Found {filtered.length} articles
           </p>
-          
+
           {unreadCount > 0 && (
             <span className="ml-2 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
               {unreadCount} unread
@@ -368,10 +384,31 @@ export default function HomeClient() {
         </div>
       </div>
 
+      <div className="flex items-center gap-3 mb-4">
+        <label className="text-sm text-gray-500">Show</label>
+
+        <select
+            value={pageSize}
+            onChange={(e) => {
+            setPageSize(Number(e.target.value))
+            setPage(1)
+            }}
+            className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+        >
+            {[12, 24, 32, 54].map(size => (
+            <option key={size} value={size}>
+                {size}
+            </option>
+            ))}
+        </select>
+
+        <span className="text-sm text-gray-500">per page</span>
+        </div>
+
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filtered.length > 0 ? (
-          filtered.map((item) => (
+          paginated.map((item) => (
             <NewsCard
               key={item.link}
               item={item}
@@ -392,6 +429,35 @@ export default function HomeClient() {
           </p>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-4 mt-8">
+            <button
+            disabled={page === 1}
+            onClick={() => setPage(p => p - 1)}
+            className="px-3 py-1 rounded-lg text-sm
+                disabled:text-gray-400 disabled:cursor-not-allowed
+                hover:bg-gray-100"
+            >
+            ← Prev
+            </button>
+
+            <span className="text-sm text-gray-600">
+            Page {page} of {totalPages}
+            </span>
+
+            <button
+            disabled={page === totalPages}
+            onClick={() => setPage(p => p + 1)}
+            className="px-3 py-1 rounded-lg text-sm
+                disabled:text-gray-400 disabled:cursor-not-allowed
+                hover:bg-gray-100"
+            >
+            Next →
+            </button>
+        </div>
+        )}
+
 
       {previewItem && (
         <ArticleModal
