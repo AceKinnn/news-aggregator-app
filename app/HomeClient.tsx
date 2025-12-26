@@ -221,6 +221,76 @@ export default function HomeClient() {
     setPage(1)
   }, [search, selectedSources])
 
+//   const getPageNumbers = (
+//     current: number,
+//     total: number,
+//     delta = 1
+//     ): (number | "ellipsis")[] => {
+//     const range: (number | "ellipsis")[] = []
+
+//     const left = Math.max(2, current - delta)
+//     const right = Math.min(total - 1, current + delta)
+
+//     range.push(1)
+
+//     if (left > 2) {
+//         range.push("ellipsis")
+//     }
+
+//     for (let i = left; i <= right; i++) {
+//         range.push(i)
+//     }
+
+//     if (right < total - 1) {
+//         range.push("ellipsis")
+//     }
+
+//     if (total > 1) {
+//         range.push(total)
+//     }
+
+//     return range
+//     }
+
+  const getPagination = (
+    current: number,
+    total: number
+    ): (number | "ellipsis")[] => {
+    if (total <= 7) {
+        return Array.from({ length: total }, (_, i) => i + 1)
+    }
+
+    // Near start
+    if (current <= 3) {
+        return [1, 2, 3, 4, 5, "ellipsis", total]
+    }
+
+    // Near end
+    if (current >= total - 2) {
+        return [
+        1,
+        "ellipsis",
+        total - 4,
+        total - 3,
+        total - 2,
+        total - 1,
+        total,
+        ]
+    }
+
+    // Middle
+    return [
+        1,
+        "ellipsis",
+        current - 1,
+        current,
+        current + 1,
+        "ellipsis",
+        total,
+    ]
+    }
+
+
 
   return (
     <main className="mx-auto p-12">
@@ -384,26 +454,83 @@ export default function HomeClient() {
         </div>
       </div>
 
-      <div className="flex items-center gap-3 mb-4">
-        <label className="text-sm text-gray-500">Show</label>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-500">Show</label>
 
-        <select
-            value={pageSize}
-            onChange={(e) => {
-            setPageSize(Number(e.target.value))
-            setPage(1)
-            }}
-            className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
-        >
-            {[12, 24, 32, 54].map(size => (
-            <option key={size} value={size}>
-                {size}
-            </option>
-            ))}
-        </select>
+            <select
+                value={pageSize}
+                onChange={(e) => {
+                setPageSize(Number(e.target.value))
+                setPage(1)
+                }}
+                className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+            >
+                {[12, 24, 32, 54].map(size => (
+                <option key={size} value={size}>
+                    {size}
+                </option>
+                ))}
+            </select>
 
-        <span className="text-sm text-gray-500">per page</span>
+            <span className="text-sm text-gray-500">per page</span>
         </div>
+        
+        <div className="flex items-center text-sm text-gray-500 my-1">
+            {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-1">
+
+                    {/* Prev */}
+                    <button
+                    disabled={page === 1}
+                    onClick={() => setPage(p => p - 1)}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg text-sm
+                        disabled:text-gray-400 disabled:cursor-not-allowed
+                        hover:bg-gray-100"
+                    >
+                    &lt;
+                    </button>
+
+                    {getPagination(page, totalPages).map((p, i) =>
+                    p === "ellipsis" ? (
+                        <span
+                        key={`e-${i}`}
+                        className="w-9 h-9 flex items-center justify-center text-gray-400"
+                        >
+                        …
+                        </span>
+                    ) : (
+                        <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium
+                            ${
+                            p === page
+                                ? "bg-blue-600 text-white"
+                                : "text-gray-700 hover:bg-gray-100"
+                            }
+                        `}
+                        >
+                        {p}
+                        </button>
+                    )
+                    )}
+
+                    {/* Next */}
+                    <button
+                    disabled={page === totalPages}
+                    onClick={() => setPage(p => p + 1)}
+                    className="w-9 h-9 flex items-center justify-center rounded-lg text-sm
+                        disabled:text-gray-400 disabled:cursor-not-allowed
+                        hover:bg-gray-100"
+                    >
+                    &gt;
+                    </button>
+                </div>
+                )}
+            </div>
+      </div>
+      
 
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -430,35 +557,7 @@ export default function HomeClient() {
         )}
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-4 mt-8">
-            <button
-            disabled={page === 1}
-            onClick={() => setPage(p => p - 1)}
-            className="px-3 py-1 rounded-lg text-sm
-                disabled:text-gray-400 disabled:cursor-not-allowed
-                hover:bg-gray-100"
-            >
-            ← Prev
-            </button>
-
-            <span className="text-sm text-gray-600">
-            Page {page} of {totalPages}
-            </span>
-
-            <button
-            disabled={page === totalPages}
-            onClick={() => setPage(p => p + 1)}
-            className="px-3 py-1 rounded-lg text-sm
-                disabled:text-gray-400 disabled:cursor-not-allowed
-                hover:bg-gray-100"
-            >
-            Next →
-            </button>
-        </div>
-        )}
-
-
+      
       {previewItem && (
         <ArticleModal
           item={previewItem}
