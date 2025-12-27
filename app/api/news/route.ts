@@ -12,7 +12,6 @@ export async function GET() {
     parseRSS("https://rss.tempo.co/nasional", "Tempo"),
     parseRSS("https://www.cnnindonesia.com/nasional/rss", "CNN"),
     parseRSS("https://www.republika.co.id/rss", "Republika"),
-    parseRSS("https://mediaindonesia.com/feed/all", "Media Indonesia"),
     parseRSS("https://lapi.kumparan.com/v2.0/rss/", "Kumparan"),
   ])
 

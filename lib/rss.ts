@@ -1,33 +1,69 @@
 import Parser from "rss-parser"
 import * as cheerio from "cheerio"
 
-const parser = new Parser()
+const parser = new Parser({
+  customFields: {
+    item: [
+      ["media:content", "mediaContent", { keepArray: true }],
+      ["img", "img"],
+      ["media:credit", "mediaCredit"],
+      ["media:title", "mediaTitle"],
 
-export function extractImage(entry: any): string | null {
-  if (entry.img) return entry.img
+      // Dublin Core
+      ["dc:creator", "creator"],
 
-  if (entry.media?.content?.[0]?.url) {
-    return entry.media.content[0].url
+      // Full HTML content
+      ["content:encoded", "contentEncoded"],
+    ],
+  },
+})
+
+export function extractImage(item: any): string | null {
+  // 1️⃣ Tempo custom <img>
+  if (typeof item.img === "string" && item.img.startsWith("http")) {
+    return item.img
   }
 
-  if (entry.enclosure?.url) {
-    return entry.enclosure.url
+  // 2️⃣ Media RSS (preferred) — Republika, SINDO, CNN
+  if (
+    Array.isArray(item.mediaContent) &&
+    item.mediaContent[0]?.$?.url
+  ) {
+    return item.mediaContent[0].$.url
   }
 
-  if (entry.content) {
-    const $ = cheerio.load(entry.content)
+  // 3️⃣ Legacy rss-parser media shape (older feeds)
+  if (item.media?.content?.[0]?.url) {
+    return item.media.content[0].url
+  }
+
+  if (item.media?.$?.url) {
+    return item.media.$.url
+  }
+
+  // 4️⃣ Enclosure — ANTARA
+  if (item.enclosure?.url) {
+    return item.enclosure.url
+  }
+
+  // 5️⃣ HTML <img> fallback (content:encoded > content > summary)
+  const html =
+    item.contentEncoded ||
+    item.content ||
+    item.summary
+
+  if (typeof html === "string") {
+    const $ = cheerio.load(html)
     const img = $("img").first().attr("src")
-    if (img) return img
-  }
-
-  if (entry.summary) {
-    const $ = cheerio.load(entry.summary)
-    const img = $("img").first().attr("src")
-    if (img) return img
+    if (img && img.startsWith("http")) {
+      return img
+    }
   }
 
   return null
 }
+
+
 
 export function cleanDescription(html?: string): string {
   if (!html) return ""
