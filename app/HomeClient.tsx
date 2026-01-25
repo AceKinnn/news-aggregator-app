@@ -294,7 +294,7 @@ export default function HomeClient() {
 
   return (
     <main className="mx-auto p-12">
-      <h1 className="text-3xl font-bold mb-4">📰 News RSS Reader</h1>
+      <h1 className="text-3xl font-bold mb-4">📰 Personal News Aggregator</h1>
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
         {/* Search */}
