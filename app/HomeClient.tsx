@@ -293,10 +293,11 @@ export default function HomeClient() {
 
 
   return (
-    <main className="mx-auto p-12">
-      <h1 className="text-3xl font-bold mb-4">📰 Personal News Aggregator</h1>
+    <main className="mx-auto px-8 pt-12 pb-8 tracking-tight md:tracking-normal">
+      <h1 className="text-3xl font-bold md:mb-4 mb-2">BeritaIndo</h1>
+      <p className="text-m text-gray-600 md:mb-4 mb-2">Agregator berita terpercaya dari seluruh Indonesia</p>
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+      <div className="flex flex-wrap sm:flex-row sm:items-center gap-4 md:mb-6 mb-2">
         {/* Search */}
         <div className="relative flex-1">
           <MagnifyingGlassIcon
@@ -319,7 +320,7 @@ export default function HomeClient() {
         <Menu as="div" className="relative inline-block text-left">
           {({ open }) => (
             <>
-              <MenuButton className="inline-flex items-center justify-between w-56 rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+              <MenuButton className="inline-flex items-center justify-between md:w-56 w-36 rounded-xl bg-white px-3 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
                 <span className="inline-flex items-center gap-2 truncate">
                   <p className="truncate">
                     {selectedSources.length === 0
@@ -345,7 +346,7 @@ export default function HomeClient() {
                 )}
               </MenuButton>
 
-              <MenuItems className="absolute right-0 z-10 mt-2 w-64 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black/5 focus:outline-none">
+              <MenuItems className="absolute md:right-0 z-10 mt-2 md:w-64 w-36 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black/5 focus:outline-none">
                 <div className="py-1">
                   {sources
                     .filter(s => s !== "All")
@@ -395,14 +396,18 @@ export default function HomeClient() {
 
       {loading && <p>Fetching news...</p>}
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <p className="text-sm text-gray-500 my-1">
+      <div className="grid grid-cols-2 md:flex md:items-center md:gap-4 md:mb-4 mb-1">
+        {/* 1. Info (Found X articles) */}
+        <div className="col-start-1 row-start-1 justify-self-start md:order-1">
+          <p className="text-sm text-gray-500 whitespace-nowrap">
             Found {filtered.length} articles
           </p>
+        </div>
 
+        {/* 2. Badges (Unread & New) */}
+        <div className="col-start-1 row-start-2 justify-self-start md:order-2 flex items-center gap-2">
           {unreadCount > 0 && (
-            <span className="ml-2 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
               {unreadCount} unread
             </span>
           )}
@@ -410,27 +415,31 @@ export default function HomeClient() {
           {newCount > 0 && !isFirstLoad.current && (
             <span
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="cursor-pointer inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 animate-pulse"
+              className="cursor-pointer inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 animate-pulse whitespace-nowrap"
             >
               {newCount} new article{newCount > 1 ? "s" : ""}
             </span>
-
           )}
-
         </div>
 
+        {/* 3. Spacer (Only visible on Desktop to push Actions/Timestamp to right) */}
+        <div className="hidden md:block order-3 flex-grow" />
 
-        <div className="flex items-center gap-3 text-sm text-gray-500 my-1">
+        {/* 4. Actions (Mark All) */}
+        <div className="col-start-2 row-start-2 justify-self-end md:order-4">
           <button
             onClick={markAllAsRead}
             disabled={unreadCount === 0}
-            className="text-sm font-medium text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+            className="text-sm text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
           >
             Mark all as read
           </button>
+        </div>
 
+        {/* 5. Timestamp & Refresh */}
+        <div className="col-start-2 row-start-1 justify-self-end md:order-5 flex items-center gap-2 text-sm text-gray-500">
           {lastUpdated && (
-            <span>
+            <span className="whitespace-nowrap">
               Last updated:{" "}
               {lastUpdated.toLocaleTimeString([], {
                 hour: "2-digit",
@@ -440,7 +449,6 @@ export default function HomeClient() {
             </span>
           )}
 
-          {/* Manual refresh */}
           <button
             onClick={fetchNews}
             title="Refresh news"
@@ -450,85 +458,104 @@ export default function HomeClient() {
           >
             ↻
           </button>
-
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-4">
+        {/* Left: Show X per page */}
         <div className="flex items-center gap-3">
-            <label className="text-sm text-gray-500">Show</label>
+          <label className="text-sm text-gray-500">Show</label>
 
-            <select
-                value={pageSize}
-                onChange={(e) => {
-                setPageSize(Number(e.target.value))
-                setPage(1)
-                }}
-                className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
-            >
-                {[12, 24, 32, 54].map(size => (
-                <option key={size} value={size}>
-                    {size}
-                </option>
-                ))}
-            </select>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value))
+              setPage(1)
+            }}
+            className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+          >
+            {[12, 24, 32, 54].map(size => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
 
-            <span className="text-sm text-gray-500">per page</span>
+          <span className="text-sm text-gray-500">per page</span>
         </div>
         
-        <div className="flex items-center text-sm text-gray-500 my-1">
-            {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-1">
+        {/* Right: Pagination (Mobile Dropdown + Desktop Buttons) */}
+        <div className="flex items-center text-sm text-gray-500">
+          {totalPages > 1 && (
+            <>
+              {/* Mobile: Dropdown pagination (Right edge on mobile) */}
+              <div className="md:hidden flex items-center gap-2">
+                <label className="text-sm text-gray-500">Page</label>
+                <select
+                  value={page}
+                  onChange={(e) => setPage(Number(e.target.value))}
+                  className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                >
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                    <option key={p} value={p}>
+                      {p} / {totalPages}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                    {/* Prev */}
-                    <button
-                    disabled={page === 1}
-                    onClick={() => setPage(p => p - 1)}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg text-sm
-                        disabled:text-gray-400 disabled:cursor-not-allowed
-                        hover:bg-gray-100"
+              {/* Desktop: Numbered pagination (Right edge on desktop) */}
+              <div className="hidden md:flex items-center justify-center gap-1">
+                {/* Prev */}
+                <button
+                  disabled={page === 1}
+                  onClick={() => setPage(p => p - 1)}
+                  className="w-9 h-9 flex items-center justify-center rounded-lg text-sm
+                    disabled:text-gray-400 disabled:cursor-not-allowed
+                    hover:bg-gray-100"
+                >
+                  &lt;
+                </button>
+
+                {getPagination(page, totalPages).map((p, i) =>
+                  p === "ellipsis" ? (
+                    <span
+                      key={`e-${i}`}
+                      className="w-9 h-9 flex items-center justify-center text-gray-400"
                     >
-                    &lt;
-                    </button>
-
-                    {getPagination(page, totalPages).map((p, i) =>
-                    p === "ellipsis" ? (
-                        <span
-                        key={`e-${i}`}
-                        className="w-9 h-9 flex items-center justify-center text-gray-400"
-                        >
-                        …
-                        </span>
-                    ) : (
-                        <button
-                        key={p}
-                        onClick={() => setPage(p)}
-                        className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium
-                            ${
-                            p === page
-                                ? "bg-blue-600 text-white"
-                                : "text-gray-700 hover:bg-gray-100"
-                            }
-                        `}
-                        >
-                        {p}
-                        </button>
-                    )
-                    )}
-
-                    {/* Next */}
+                      …
+                    </span>
+                  ) : (
                     <button
-                    disabled={page === totalPages}
-                    onClick={() => setPage(p => p + 1)}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg text-sm
-                        disabled:text-gray-400 disabled:cursor-not-allowed
-                        hover:bg-gray-100"
+                      key={p}
+                      onClick={() => setPage(p)}
+                      className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm font-medium
+                        ${
+                          p === page
+                            ? "bg-blue-600 text-white"
+                            : "text-gray-700 hover:bg-gray-100"
+                        }
+                      `}
                     >
-                    &gt;
+                      {p}
                     </button>
-                </div>
+                  )
                 )}
-            </div>
+
+                {/* Next */}
+                <button
+                  disabled={page === totalPages}
+                  onClick={() => setPage(p => p + 1)}
+                  className="w-9 h-9 flex items-center justify-center rounded-lg text-sm
+                    disabled:text-gray-400 disabled:cursor-not-allowed
+                    hover:bg-gray-100"
+                >
+                  &gt;
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
       
 
