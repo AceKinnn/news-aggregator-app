@@ -1,128 +1,56 @@
-# 📰 Personal News Aggregator
+# BeritaIndo
 
-> [!NOTE]
-> **Archived:** this project has been refined and merged into my portfolio.
-> It now reads 58 category feeds and refreshes them on the server every 15 minutes.
->
-> - Live: https://acekinnn-portfolio.vercel.app/indonesian-news-aggregator
-> - Code: [acekinnn-portfolio/src/app/indonesian-news-aggregator](https://github.com/AceKinnn/acekinnn-portfolio/tree/main/src/app/indonesian-news-aggregator)
->
-> This repository is kept read-only for its history.
+An Indonesian news aggregator that gathers the latest headlines from eight publishers' RSS feeds, sorted into categories. Every story opens on the publisher's own site.
 
-A self-hosted, privacy-conscious RSS news reader that consolidates real-time articles from trusted Indonesian and international media outlets into a single, fast, and distraction-free interface.
+The same app also runs in my portfolio at [acekinnn-portfolio.vercel.app/indonesian-news-aggregator](https://acekinnn-portfolio.vercel.app/indonesian-news-aggregator).
 
-Built with **Next.js**, this app fetches, filters, and displays news so you can stay informed without hopping between websites or algorithms deciding what you see.
+## Features
 
-![News Aggregator Preview](public\landing-page.png)
+- **Categories:** National, World, Business, Sports, Tech, Entertainment, Lifestyle, Health, Automotive, Education and Regional
+- **Search** across headlines and summaries
+- **Source filters**, combinable with a category, with a story count for each source
+- **Read tracking** with "mark all as read", saved in the visitor's browser
+- **Shareable views:** the category, search and sources are kept in the URL
+- **Light and dark mode**, following the visitor's setting
 
-## ✨ Features
+## An aggregator, not a scraper
 
-- **Real-time news** from 10+ reputable sources
-- **Search & filter** by keyword or news source
-- **Mark as read/unread** (persists in browser)
-- **Pagination & adjustable page size**
-- **Keyboard shortcuts**:
-  - `R` → Refresh feed
-  - `Esc` → Close article preview
-- **URL-based state**: Search and filters appear in the URL for sharing/bookmarking
-- **Responsive design**: Works on mobile, tablet, and desktop
-- **New article indicators** (flashes for 2 minutes after first load)
+It only reads the publishers' official RSS feeds and shows each story's headline, short summary and the feed's own image, linking to the original article. It never fetches article pages.
 
-## 📡 Supported News Sources
+| Publisher | Feeds |
+|---|---|
+| ANTARA | Politics, law, world, business, football, tech, entertainment, lifestyle, automotive, humanities, metro |
+| CNN Indonesia | National, international, business, sports, tech, entertainment, lifestyle |
+| CNBC Indonesia | News, market, entrepreneur, sharia, tech, lifestyle |
+| Detik | News, international, finance, sport, inet, hot, oto, health, travel, food |
+| Liputan6 | News, global, business, football, sport, tech, showbiz, health, lifestyle, automotive |
+| Republika | News, international, economy, Islamic affairs |
+| SINDOnews | National, international, business, sports, tech, regional, education, automotive, lifestyle |
+| Kumparan | One feed, sorted into categories using its own tags |
 
-| Source          | Language | Notes |
-|-----------------|----------|-------|
-| Kompas          | ID       | General news |
-| Antara          | ID / EN  | National news agency |
-| Sindonews       | ID       | Politics, economy, lifestyle |
-| Liputan6        | ID       | Breaking news |
-| Tempo           | ID       | In-depth reporting |
-| Republika       | ID       | Islamic perspective |
-| CNBC Indonesia  | ID       | Business & finance |
-| CNN Indonesia   | ID       | National & global news |
-| Detik           | ID       | High-volume updates |
-| Kumparan        | ID       | Youth-focused, digital-native |
+That's 58 feeds in total, listed in `src/lib/news/feeds.ts`, with notes on the ones left out: Kompas's feed now rejects its API key, and Tempo's section feeds are behind a bot check.
 
-> ℹ️ All content is fetched via public RSS feeds and displayed with proper attribution. Original articles open in new tabs.
+## How it works
 
-## ⚙️ Tech Stack
+- **Rendered on the server, refreshed every 15 minutes** (`revalidate = 900`). The feeds are read a few times an hour however many people visit, and there's no public API route to abuse.
+- **Fault-tolerant:** feeds are fetched 10 at a time with a 12-second timeout. One that fails is skipped and named on the page, rather than breaking it.
+- **Safe input:** links must be web URLs, images must be HTTPS, and duplicate stories are merged.
+- Search, filters and pagination run in the browser.
 
-- **Framework**: [Next.js](https://nextjs.org/) (App Router, Server Components)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **UI Components**: [Headless UI](https://headlessui.com/)
-- **Icons**: [Heroicons](https://heroicons.com/)
-- **Date Handling**: [Day.js](https://day.js.org/)
-- **RSS Parsing**: Custom API route using `rss-parser` (or equivalent)
-- **Hosting**: [Vercel](https://vercel.com/)
+## Running it
 
-## 🚀 Getting Started
+You need Node.js 18 or newer. No API keys are required.
 
-### Prerequisites
-- Node.js ≥ 18.x
-- npm / yarn / pnpm
-
-### Installation
-
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/your-username/news-aggregator.git
-   cd news-aggregator
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
-
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-
-4. Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Environment Variables (Optional)
-If you plan to add rate-limiting, caching, or external APIs later:
-```env
-# .env.local
-NEXT_PUBLIC_CACHE_TTL=3600
+```bash
+npm install
+npm run dev     # http://localhost:3000
+npm run build   # production build
 ```
 
-## 🛠️ Project Structure
+## Stack
 
-```
-/news-aggregator
-├── app/
-│   ├── api/news/route.ts     # RSS fetching & parsing endpoint
-│   └── page.tsx              # Main UI (client + server components)
-├── components/
-│   ├── NewsCard.tsx
-│   └── ArticleModal.tsx
-├── lib/
-│   ├── constants.ts          # Source metadata (names, colors, RSS URLs)
-│   └── rss.ts                # Core RSS parsing logic
-├── public/
-│   └── landing-page.png      # Preview image for README
-├── types/
-│   └── news.ts               # TypeScript interface
-└── README.md
-```
+Next.js 15 (App Router), TypeScript, Tailwind CSS and `rss-parser`.
 
-## 🔧 Customization
+## History
 
-- **Add a new source**:  
-  1. Add its RSS feed URL to your parser logic (`app/api/news/route.ts`)  
-  2. Include its name in `SOURCE_COLORS` (`lib/constants.ts`)  
-  3. Ensure CORS/proxy handling if needed
-
-- **Change pagination size**:  
-  Modify default `pageSize` in `HomeClient` component.
-
-- **Deploy**:  
-  Push to GitHub and connect to Vercel—zero config needed!
-
-## 📜 License
-
-MIT License — feel free to use, modify, and share.
+The first version was a client-side Next.js 16 app that fetched every feed on each visit, which meant one broken feed took the whole page down. It was rebuilt as part of my portfolio, then brought back here as a standalone app.
