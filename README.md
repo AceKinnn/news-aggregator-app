@@ -1,5 +1,14 @@
 # 📰 Personal News Aggregator
 
+> [!NOTE]
+> **Archived:** this project has been refined and merged into my portfolio.
+> It now reads 58 category feeds and refreshes them on the server every 15 minutes.
+>
+> - Live: https://acekinnn-portfolio.vercel.app/indonesian-news-aggregator
+> - Code: [acekinnn-portfolio/src/app/indonesian-news-aggregator](https://github.com/AceKinnn/acekinnn-portfolio/tree/main/src/app/indonesian-news-aggregator)
+>
+> This repository is kept read-only for its history.
+
 A self-hosted, privacy-conscious RSS news reader that consolidates real-time articles from trusted Indonesian and international media outlets into a single, fast, and distraction-free interface.
 
 Built with **Next.js**, this app fetches, filters, and displays news so you can stay informed without hopping between websites or algorithms deciding what you see.
